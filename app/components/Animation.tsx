@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import ClaudeMockup from "./ClaudeMockup";
 
 type Phase =
@@ -35,8 +35,6 @@ export default function Animation({ question }: { question: string }) {
   const responseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLDivElement>(null);
   const sendRef = useRef<HTMLButtonElement>(null);
-
-  const responseWords = SNARKY_RESPONSE.split(" ");
 
   // Set initial cursor position once mounted
   useEffect(() => {
@@ -93,58 +91,67 @@ export default function Animation({ question }: { question: string }) {
   }, [phase, question]);
 
   // Typing effect for user input
-  const typeNextChar = useCallback(() => {
-    setCharIndex((prev) => {
-      const next = prev + 1;
-      if (next >= question.length) {
-        setTimeout(() => setPhase("pause-after-type"), 200);
-        return next;
+  useEffect(() => {
+    if (phase !== "typing") return;
+
+    let cancelled = false;
+
+    function typeNext(index: number) {
+      if (cancelled) return;
+      setCharIndex(index + 1);
+      if (index + 1 >= question.length) {
+        setTimeout(() => {
+          if (!cancelled) setPhase("pause-after-type");
+        }, 200);
+        return;
       }
       const delay = 40 + Math.random() * 60;
-      typingTimer.current = setTimeout(typeNextChar, delay);
-      return next;
-    });
-  }, [question]);
-
-  useEffect(() => {
-    if (phase === "typing" && charIndex === 0) {
-      const delay = 40 + Math.random() * 60;
-      typingTimer.current = setTimeout(typeNextChar, delay);
+      typingTimer.current = setTimeout(() => typeNext(index + 1), delay);
     }
+
+    const delay = 40 + Math.random() * 60;
+    typingTimer.current = setTimeout(() => typeNext(0), delay);
+
     return () => {
+      cancelled = true;
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
-  }, [phase, charIndex, typeNextChar]);
+  }, [phase, question]);
 
   // Response streaming effect (word by word)
-  const streamNextWord = useCallback(() => {
-    setResponseWordIndex((prev) => {
-      const next = prev + 1;
-      if (next >= responseWords.length) {
-        setTimeout(() => setPhase("done"), 800);
-        return next;
+  useEffect(() => {
+    if (phase !== "responding") return;
+
+    let cancelled = false;
+    const words = SNARKY_RESPONSE.split(" ");
+
+    function streamNext(index: number) {
+      if (cancelled) return;
+      setResponseWordIndex(index + 1);
+      if (index + 1 >= words.length) {
+        setTimeout(() => {
+          if (!cancelled) setPhase("done");
+        }, 800);
+        return;
       }
       const delay = 30 + Math.random() * 50;
-      responseTimer.current = setTimeout(streamNextWord, delay);
-      return next;
-    });
-  }, [responseWords.length]);
-
-  useEffect(() => {
-    if (phase === "responding" && responseWordIndex === 0) {
-      // Small pause before response starts
-      responseTimer.current = setTimeout(streamNextWord, 600);
+      responseTimer.current = setTimeout(() => streamNext(index + 1), delay);
     }
+
+    responseTimer.current = setTimeout(() => streamNext(0), 600);
+
     return () => {
+      cancelled = true;
       if (responseTimer.current) clearTimeout(responseTimer.current);
     };
-  }, [phase, responseWordIndex, streamNextWord]);
+  }, [phase]);
 
   const typedText = question.slice(0, charIndex);
   const isTypingPhase = phase === "typing" || phase === "focusing";
   const isSent = phase === "responding" || phase === "done";
+  const allResponseWords = SNARKY_RESPONSE.split(" ");
   const responseText = isSent
-    ? responseWords.slice(0, responseWordIndex).join(" ")
+    ? allResponseWords.slice(0, responseWordIndex).join(" ")
     : undefined;
 
   return (
@@ -179,7 +186,7 @@ export default function Animation({ question }: { question: string }) {
           sendRef={sendRef}
           sentMessage={isSent ? question : null}
           responseText={responseText}
-          showResponseCursor={phase === "responding" && responseWordIndex < responseWords.length}
+          showResponseCursor={phase === "responding" && responseWordIndex < allResponseWords.length}
         />
       </div>
 
