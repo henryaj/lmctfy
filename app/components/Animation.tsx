@@ -31,132 +31,107 @@ export default function Animation({ question }: { question: string }) {
   const [showCursor, setShowCursor] = useState(true);
   const [responseWordIndex, setResponseWordIndex] = useState(0);
   const [countdown, setCountdown] = useState(3);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const responseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLDivElement>(null);
   const sendRef = useRef<HTMLButtonElement>(null);
+  const mountedRef = useRef(true);
 
-  // Set initial cursor position once mounted
+  // Cleanup on unmount
   useEffect(() => {
-    setCursorPos({ x: window.innerWidth * 0.3, y: window.innerHeight * 0.2 });
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
   }, []);
 
-  // Phase transitions
+  // Single effect that runs the entire animation sequence
   useEffect(() => {
-    console.log("[phase transition] phase =", phase);
-    let timer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    switch (phase) {
-      case "idle":
-        timer = setTimeout(() => {
-          console.log("[phase] idle -> focusing");
-          const pos = getElementCenter(inputRef.current);
-          if (pos) setCursorPos(pos);
-          setPhase("focusing");
-        }, 600);
-        break;
-      case "focusing":
-        timer = setTimeout(() => {
-          console.log("[phase] focusing -> typing");
-          setPhase("typing");
-        }, 1000);
-        break;
-      case "pause-after-type":
-        timer = setTimeout(() => {
-          const pos = getElementCenter(sendRef.current);
-          if (pos) setCursorPos(pos);
-          setPhase("sending");
-        }, 600);
-        break;
-      case "sending":
-        timer = setTimeout(() => {
-          setShowCursor(false);
-          setPhase("responding");
-        }, 800);
-        break;
-      case "done": {
-        setCountdown(3);
-        const tick = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(tick);
-              window.location.href = `https://claude.ai/new?q=${encodeURIComponent(question)}`;
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        return () => clearInterval(tick);
-      }
+    function schedule(fn: () => void, ms: number) {
+      const t = setTimeout(() => {
+        if (!cancelled && mountedRef.current) fn();
+      }, ms);
+      timers.push(t);
+      return t;
     }
 
-    return () => clearTimeout(timer);
-  }, [phase, question]);
-
-  // Typing effect for user input
-  useEffect(() => {
-    if (phase !== "typing") return;
-
-    console.log("[typing] effect started, question length =", question.length);
-    let cancelled = false;
-
-    function typeNext(index: number) {
-      if (cancelled) {
-        console.log("[typing] cancelled at index", index);
-        return;
-      }
-      console.log("[typing] char", index + 1, "/", question.length);
-      setCharIndex(index + 1);
-      if (index + 1 >= question.length) {
-        setTimeout(() => {
-          if (!cancelled) {
-            console.log("[typing] done, -> pause-after-type");
-            setPhase("pause-after-type");
-          }
-        }, 200);
-        return;
-      }
-      const delay = 40 + Math.random() * 60;
-      typingTimer.current = setTimeout(() => typeNext(index + 1), delay);
-    }
-
-    const delay = 40 + Math.random() * 60;
-    typingTimer.current = setTimeout(() => typeNext(0), delay);
-
-    return () => {
-      console.log("[typing] cleanup, cancelled =", cancelled);
-      cancelled = true;
-      if (typingTimer.current) clearTimeout(typingTimer.current);
-    };
-  }, [phase, question]);
-
-  // Response streaming effect (word by word)
-  useEffect(() => {
-    if (phase !== "responding") return;
-
-    let cancelled = false;
-    const words = SNARKY_RESPONSE.split(" ");
-
-    function streamNext(index: number) {
+    async function runAnimation() {
+      // Phase: idle -> focusing (move cursor to input)
+      await delay(600);
       if (cancelled) return;
-      setResponseWordIndex(index + 1);
-      if (index + 1 >= words.length) {
-        setTimeout(() => {
-          if (!cancelled) setPhase("done");
-        }, 800);
-        return;
+      const inputPos = getElementCenter(inputRef.current);
+      if (inputPos) setCursorPos(inputPos);
+      setPhase("focusing");
+
+      // Phase: focusing -> typing
+      await delay(1000);
+      if (cancelled) return;
+      setPhase("typing");
+
+      // Phase: typing (character by character)
+      for (let i = 0; i < question.length; i++) {
+        await delay(40 + Math.random() * 60);
+        if (cancelled) return;
+        setCharIndex(i + 1);
       }
-      const delay = 30 + Math.random() * 50;
-      responseTimer.current = setTimeout(() => streamNext(index + 1), delay);
+
+      // Phase: pause-after-type -> sending (move cursor to send)
+      await delay(200);
+      if (cancelled) return;
+      setPhase("pause-after-type");
+
+      await delay(600);
+      if (cancelled) return;
+      const sendPos = getElementCenter(sendRef.current);
+      if (sendPos) setCursorPos(sendPos);
+      setPhase("sending");
+
+      // Phase: sending -> responding
+      await delay(800);
+      if (cancelled) return;
+      setShowCursor(false);
+      setPhase("responding");
+
+      // Phase: responding (word by word)
+      const words = SNARKY_RESPONSE.split(" ");
+      await delay(600);
+      for (let i = 0; i < words.length; i++) {
+        await delay(30 + Math.random() * 50);
+        if (cancelled) return;
+        setResponseWordIndex(i + 1);
+      }
+
+      // Phase: done -> countdown -> redirect
+      await delay(800);
+      if (cancelled) return;
+      setPhase("done");
+
+      for (let i = 3; i >= 0; i--) {
+        if (cancelled) return;
+        setCountdown(i);
+        if (i === 0) {
+          window.location.href = `https://claude.ai/new?q=${encodeURIComponent(question)}`;
+          return;
+        }
+        await delay(1000);
+      }
     }
 
-    responseTimer.current = setTimeout(() => streamNext(0), 600);
+    function delay(ms: number): Promise<void> {
+      return new Promise((resolve) => {
+        schedule(resolve, ms);
+      });
+    }
+
+    // Set initial cursor position
+    setCursorPos({ x: window.innerWidth * 0.3, y: window.innerHeight * 0.2 });
+
+    runAnimation();
 
     return () => {
       cancelled = true;
-      if (responseTimer.current) clearTimeout(responseTimer.current);
+      timers.forEach(clearTimeout);
     };
-  }, [phase]);
+  }, [question]);
 
   const typedText = question.slice(0, charIndex);
   const isTypingPhase = phase === "typing" || phase === "focusing";

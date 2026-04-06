@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic:
+      - img
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - img [ref=e7]
+          - generic [ref=e11]: Claude
+        - generic [ref=e13]: New chat
+      - generic [ref=e16]: How can I help you today?
+      - generic [ref=e18]:
+        - generic [ref=e19]: Reply to Claude...
+        - button [ref=e20]:
+          - img [ref=e21]
+  - alert [ref=e23]
