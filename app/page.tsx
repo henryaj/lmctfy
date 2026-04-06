@@ -9,7 +9,7 @@ type Props = {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { q } = await searchParams;
   if (q) {
-    const question = decodeURIComponent(q);
+    const question = decodeURIComponent(q.replace(/\+/g, " "));
     return {
       title: `LMCTFY: ${question}`,
       description: "Someone thought you should ask Claude this...",
@@ -28,7 +28,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
 export default async function Home({ searchParams }: Props) {
   const { q } = await searchParams;
-  const question = q ? decodeURIComponent(q) : null;
+  const question = q ? decodeURIComponent(q.replace(/\+/g, " ")) : null;
 
   if (question) {
     return <Animation question={question} />;

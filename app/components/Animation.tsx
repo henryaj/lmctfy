@@ -43,11 +43,13 @@ export default function Animation({ question }: { question: string }) {
 
   // Phase transitions
   useEffect(() => {
+    console.log("[phase transition] phase =", phase);
     let timer: ReturnType<typeof setTimeout>;
 
     switch (phase) {
       case "idle":
         timer = setTimeout(() => {
+          console.log("[phase] idle -> focusing");
           const pos = getElementCenter(inputRef.current);
           if (pos) setCursorPos(pos);
           setPhase("focusing");
@@ -55,6 +57,7 @@ export default function Animation({ question }: { question: string }) {
         break;
       case "focusing":
         timer = setTimeout(() => {
+          console.log("[phase] focusing -> typing");
           setPhase("typing");
         }, 1000);
         break;
@@ -94,14 +97,22 @@ export default function Animation({ question }: { question: string }) {
   useEffect(() => {
     if (phase !== "typing") return;
 
+    console.log("[typing] effect started, question length =", question.length);
     let cancelled = false;
 
     function typeNext(index: number) {
-      if (cancelled) return;
+      if (cancelled) {
+        console.log("[typing] cancelled at index", index);
+        return;
+      }
+      console.log("[typing] char", index + 1, "/", question.length);
       setCharIndex(index + 1);
       if (index + 1 >= question.length) {
         setTimeout(() => {
-          if (!cancelled) setPhase("pause-after-type");
+          if (!cancelled) {
+            console.log("[typing] done, -> pause-after-type");
+            setPhase("pause-after-type");
+          }
         }, 200);
         return;
       }
@@ -113,6 +124,7 @@ export default function Animation({ question }: { question: string }) {
     typingTimer.current = setTimeout(() => typeNext(0), delay);
 
     return () => {
+      console.log("[typing] cleanup, cancelled =", cancelled);
       cancelled = true;
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
