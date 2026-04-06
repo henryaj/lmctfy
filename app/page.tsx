@@ -1,5 +1,4 @@
-import InputForm from "./components/InputForm";
-import Animation from "./components/Animation";
+import ClientPage from "./components/ClientPage";
 import type { Metadata } from "next";
 
 type Props = {
@@ -26,13 +25,6 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   };
 }
 
-export default async function Home({ searchParams }: Props) {
-  const { q } = await searchParams;
-  const question = q ? decodeURIComponent(q.replace(/\+/g, " ")) : null;
-
-  if (question) {
-    return <Animation question={question} />;
-  }
-
-  return <InputForm />;
+export default function Home() {
+  return <ClientPage />;
 }
