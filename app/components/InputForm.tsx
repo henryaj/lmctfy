@@ -89,7 +89,15 @@ export default function InputForm() {
       </div>
 
       <footer className="mt-16 text-claude-text/25 text-xs">
-        Made with gentle sarcasm
+        Made with gentle sarcasm &middot;{" "}
+        <a
+          href="https://github.com/henryaj/lmctfy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-claude-text/40 transition-colors"
+        >
+          Source
+        </a>
       </footer>
     </div>
   );

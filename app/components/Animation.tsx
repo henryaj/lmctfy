@@ -30,6 +30,7 @@ export default function Animation({ question }: { question: string }) {
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const [showCursor, setShowCursor] = useState(true);
   const [responseWordIndex, setResponseWordIndex] = useState(0);
+  const [countdown, setCountdown] = useState(3);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -72,11 +73,20 @@ export default function Animation({ question }: { question: string }) {
           setPhase("responding");
         }, 800);
         break;
-      case "done":
-        timer = setTimeout(() => {
-          window.location.href = `https://claude.ai/new?q=${encodeURIComponent(question)}`;
-        }, 3000);
-        break;
+      case "done": {
+        setCountdown(3);
+        const tick = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(tick);
+              window.location.href = `https://claude.ai/new?q=${encodeURIComponent(question)}`;
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(tick);
+      }
     }
 
     return () => clearTimeout(timer);
@@ -183,9 +193,28 @@ export default function Animation({ question }: { question: string }) {
             <p className="text-claude-text/50 mb-3 text-sm sm:text-base">
               Next time, try asking Claude yourself.
             </p>
-            <p className="text-claude-text/30 text-xs mb-8">
-              Redirecting to claude.ai...
-            </p>
+            <div className="flex items-center justify-center gap-2 text-claude-text/30 text-xs mb-8">
+              <svg
+                className="animate-spin h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              <span>Redirecting to claude.ai in {countdown}...</span>
+            </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a
                 href={`https://claude.ai/new?q=${encodeURIComponent(question)}`}
