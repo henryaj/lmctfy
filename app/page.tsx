@@ -12,19 +12,7 @@ function decodeQuery(q: string): string {
   return decodeURIComponent(q.replace(/\+/g, " "));
 }
 
-export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const { q } = await searchParams;
-  if (q) {
-    const question = decodeQuery(q);
-    return {
-      title: `LMCTFY: ${question}`,
-      description: "Someone thought you should ask Claude this...",
-      openGraph: {
-        title: `LMCTFY: ${question}`,
-        description: "Someone thought you should ask Claude this...",
-      },
-    };
-  }
+export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Let Me Claude That For You",
     description:
