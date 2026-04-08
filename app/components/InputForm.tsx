@@ -98,6 +98,15 @@ export default function InputForm() {
         >
           Henry Stanley
         </a>
+        {" "}during{" "}
+        <a
+          href="https://inkhaven.blog"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-claude-text/40 transition-colors"
+        >
+          Inkhaven
+        </a>
         {" "}&middot;{" "}
         <a
           href="https://github.com/henryaj/lmctfy"
